@@ -52,7 +52,7 @@ if web_app.exists():
   const chapterNumber=Number(match[2]);
   const firstVerse=match[3]?Number(match[3]):1;
   const lastVerse=match[4]?Number(match[4]):(match[3]?firstVerse:Infinity);
-  const fileName=bookName.replace(/\\s+/g,'_');
+  const fileName=bookName.replace(/\s+/g,'_');
   // Read from the embedded in-memory KJV dataset; no file fetch or network.
   const bookData=window.__KJV_BOOKS__&&window.__KJV_BOOKS__[fileName];
   if(!bookData)throw new Error('The offline KJV book '+bookName+' is missing from this app.');
