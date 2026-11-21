@@ -29,3 +29,41 @@ if gradle_groovy.exists():
     g = re.sub(r'applicationId\s+"[^"]+"',
                'applicationId "com.biblereadingplan.app"', g, count=1)
     gradle_groovy.write_text(g, encoding="utf-8")
+
+# Replace the online Bible API reader with the bundled, complete KJV text.
+# The 66 book JSON files are packaged in assets/www/kjv, so every passage
+# can be opened without an internet connection on the installed app.
+web_app = Path("assets/www/index.html")
+if web_app.exists():
+    html = web_app.read_text(encoding="utf-8")
+    start = html.find("async function fetchOnePassage(reference){")
+    end = html.find("\nasync function getPassage", start)
+    if start < 0 or end < 0:
+        raise SystemExit("Could not locate the Bible passage loader in index.html.")
+    offline_loader = r"""async function fetchOnePassage(reference){
+  const cached=await cacheGet(reference);
+  if(cached)return cached;
+  const normalized=reference.replace(/:\\s*/g,':').replace(/\\s+/g,' ').trim();
+  const match=normalized.match(/^(.*?)\\s+(\\d+)(?::(\\d+)(?:-(\\d+))?)?$/);
+  if(!match)throw new Error('This Bible reference could not be understood: '+reference);
+  let bookName=match[1].trim();
+  if(bookName.toLowerCase()==='psalm')bookName='Psalms';
+  const chapterNumber=Number(match[2]);
+  const firstVerse=match[3]?Number(match[3]):1;
+  const lastVerse=match[4]?Number(match[4]):(match[3]?firstVerse:Infinity);
+  const fileName=bookName.replace(/\\s+/g,'_');
+  const response=await fetch('./kjv/'+encodeURIComponent(fileName)+'.json');
+  if(!response.ok)throw new Error('The offline KJV book '+bookName+' is missing from this app.');
+  const bookData=await response.json();
+  const chapterData=(bookData.chapters||[]).find(c=>Number(c.chapter)===chapterNumber);
+  if(!chapterData)throw new Error('Chapter '+chapterNumber+' was not found in '+bookName+'.');
+  const verses=(chapterData.verses||[])
+    .filter(v=>Number(v.number)>=firstVerse&&Number(v.number)<=lastVerse)
+    .map(v=>({book_name:bookData.englishName||bookName,chapter:chapterNumber,verse:Number(v.number),text:v.text}));
+  if(!verses.length)throw new Error('No verses were found for '+reference+'.');
+  const data={reference,translation_name:'King James Version (KJV)',verses};
+  await cachePut(reference,data);
+  return data;
+}"""
+    html = html[:start] + offline_loader + html[end:]
+    web_app.write_text(html, encoding="utf-8")
