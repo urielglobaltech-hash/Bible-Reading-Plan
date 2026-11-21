@@ -1,0 +1,25 @@
+workflows:
+  bible-reading-plan-android:
+    name: Bible Reading Plan Android
+    max_build_duration: 60
+    instance_type: linux_x2
+    environment:
+      flutter: stable
+    scripts:
+      - name: Generate Android project files
+        script: |
+          flutter create --platforms=android --org com.biblereadingplan --project-name bible_reading_plan --no-pub .
+      - name: Set Android app name and internet permission
+        script: |
+          python3 tool/prepare_android.py
+      - name: Install Flutter dependencies
+        script: flutter pub get
+      - name: Generate Android launcher icon
+        script: dart run flutter_launcher_icons
+      - name: Build release APK
+        script: flutter build apk --release
+      - name: Build Android App Bundle
+        script: flutter build appbundle --release
+    artifacts:
+      - build/app/outputs/flutter-apk/app-release.apk
+      - build/app/outputs/bundle/release/app-release.aab
