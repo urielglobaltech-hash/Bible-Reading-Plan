@@ -43,15 +43,15 @@ if web_app.exists():
     offline_loader = r"""async function fetchOnePassage(reference){
   const cached=await cacheGet(reference);
   if(cached)return cached;
-  const normalized=reference.replace(/:\\s*/g,':').replace(/\\s+/g,' ').trim();
-  const match=normalized.match(/^(.*?)\\s+(\\d+)(?::(\\d+)(?:-(\\d+))?)?$/);
+  const normalized=reference.replace(/:\s*/g,':').replace(/\s+/g,' ').trim();
+  const match=normalized.match(/^(.*?)\s+(\d+)(?::(\d+)(?:-(\d+))?)?$/);
   if(!match)throw new Error('This Bible reference could not be understood: '+reference);
   let bookName=match[1].trim();
   if(bookName.toLowerCase()==='psalm')bookName='Psalms';
   const chapterNumber=Number(match[2]);
   const firstVerse=match[3]?Number(match[3]):1;
   const lastVerse=match[4]?Number(match[4]):(match[3]?firstVerse:Infinity);
-  const fileName=bookName.replace(/\\s+/g,'_');
+  const fileName=bookName.replace(/\s+/g,'_');
   const response=await fetch('./kjv/'+encodeURIComponent(fileName)+'.json');
   if(!response.ok)throw new Error('The offline KJV book '+bookName+' is missing from this app.');
   const bookData=await response.json();
